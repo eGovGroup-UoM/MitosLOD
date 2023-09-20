@@ -1,11 +1,12 @@
 import pandas as pd
 import json
 
-base_url = ''
+base_url = 'https://mitos.gov.gr:8890'
 
 def is_valid(value):
     return bool(value) and str(value).lower() != 'nan'
 
+# Construct Life Events Mapping
 def preprocess_life_events(life_events_data):
     mapping = {}
     current_id = 0
@@ -24,7 +25,50 @@ def preprocess_life_events(life_events_data):
                 current_id += 1
     return mapping
 
+#Construct Rules Mapping
+def preprocess_rules(rules):
+    """
+    Processes the Rules dataframe to create a JSON mapping with conditions_name as the primary key.
+    Assigns an incrementing id value for each unique condition, starting from 1.
+    """
+    json_mapping = {}
+    condition_id_counter = 1  # Initialize the counter
+    
+    for _, row in rules.iterrows():
 
+        json_mapping[condition_id_counter] = {
+            "rule_public_service_id": int(row["id"]) if not pd.isnull(row["rule_decision_number"]) else None,
+            "rule_decision_number": row["rule_decision_number"] if not pd.isnull(row["rule_decision_number"]) else None,
+            "rule_ada": row["rule_ada"] if not pd.isnull(row["rule_ada"]) else None,
+            "rule_description": row["rule_description"] if not pd.isnull(row["rule_description"]) else None
+        }
+        condition_id_counter += 1  # Increment the counter
+    
+    return json_mapping
+
+#Construct Rules Mapping
+def preprocess_evidences(evidences):
+    """
+    Processes the Rules dataframe to create a JSON mapping with conditions_name as the primary key.
+    Assigns an incrementing id value for each unique condition, starting from 1.
+    """
+    json_mapping = {}
+    condition_id_counter = 1  # Initialize the counter
+    
+    for _, row in evidences.iterrows():
+
+        json_mapping[condition_id_counter] = {
+            "evidence_public_service_id": int(row["id"]) if not pd.isnull(row["id"]) else None,
+            "evidence_related_url": row["evidence_related_url"] if not pd.isnull(row["evidence_related_url"]) else None,
+            "evidence_num_id": row["evidence_num_id"] if not pd.isnull(row["evidence_num_id"]) else None,
+            "evidence_description": row["evidence_description"] if not pd.isnull(row["evidence_description"]) else None,
+            "evidence_type": row["evidence_type"] if not pd.isnull(row["evidence_type"]) else None
+        }
+        condition_id_counter += 1  # Increment the counter
+    
+    return json_mapping
+
+# Construct Conditions Mapping
 def preprocess_conditions(df):
     """
     Processes the conditions dataframe to create a JSON mapping with conditions_name as the primary key.
@@ -80,12 +124,17 @@ def adjust_punctuation(triples_list):
         triples_list[-1] += ' .'
     return triples_list
 
+rule_counter = 1
 def generate_triples(resource_id, uuid, title, description, provided_language, cost_min, cost_max, output_type, life_events, alternative_titles, df_conditions, df_evidences, df_rules):
+    global rule_counter 
+    
     triples = []
     temp_triples = []
+    
     temp_triples.append(f"<{base_url}/id/ps/{resource_id}> a cpsv:PublicService ")
     temp_triples.append(f'  dct:identifier "{uuid}" ')
     temp_triples.append(f'  dct:title "{title}" ')
+
     if is_valid(alternative_titles):
         temp_triples.append(f'  skos:altLabel """{alternative_titles}""" ')
     if is_valid(description):
@@ -93,32 +142,32 @@ def generate_triples(resource_id, uuid, title, description, provided_language, c
     
     # Check if cost_min and cost_max are not null and add the cv:hasCost triple
     if not pd.isna(cost_min) and not pd.isna(cost_max):
-        temp_triples.append(f' cv:hasCost <{base_url}/PublicServices/id/cost/cost_max/cost{resource_id}> ')
-        temp_triples.append(f' cv:hasCost <{base_url}/PublicServices/id/cost/cost_min/cost{resource_id}> ')
+        temp_triples.append(f'  cv:hasCost <{base_url}/PublicServices/id/cost/cost_max/cost{resource_id}> ')
+        temp_triples.append(f'  cv:hasCost <{base_url}/PublicServices/id/cost/cost_min/cost{resource_id}> ')
          
     # Check provided_language and add the corresponding triple(s), if not empty
     if pd.notna(provided_language):
         languages = provided_language.split(',')
         for language in languages:
             language = language.strip()  # Remove any leading/trailing whitespace
-            temp_triples.append(f' dct:language "{language}" ;')
+            temp_triples.append(f'  dct:language "{language}" ;')
 
     if df_conditions is not None:
         matched_conditions = df_conditions[df_conditions['id'] == resource_id]['conditions_name']
     for condition_name in matched_conditions:
         if condition_name in conditions_mapping:
             condition_id = conditions_mapping[condition_name]["id"]  # Adjusted this line to access the id within the dictionary
-            temp_triples.append(f' cv:holdsRequirement<{base_url}/PublicServices/id/requirement/requirement{condition_id}> ')
-          
-    # Check if life_events is filled, and if so, add the cv:isGroupedBy triple
-    condition_found_evidences = resource_id in df_evidences['id'].values
-    if condition_found_evidences:
-        temp_triples.append(f' cv:hasInput <{base_url}/PublicServices/id/evidence/evidence{resource_id}> ')
+            temp_triples.append(f'  cv:holdsRequirement <{base_url}/PublicServices/id/requirement/requirement{condition_id}> ')
+   
+    if df_rules is not None:
+        matching_keys = [key for key, value in rules_mapping.items() if isinstance(value, dict) and value.get("rule_public_service_id") == resource_id]
+        for key in matching_keys:
+            temp_triples.append(f'  cv:hasLegalResource <{base_url}/PublicServices/id/rule/rule{key}> ')
 
-    # Check if life_events is filled, and if so, add the cv:isGroupedBy triple
-    condition_found_rules = resource_id in df_rules['id'].values
-    if condition_found_rules:
-        temp_triples.append(f' cv:hasLegalResource <{base_url}/PublicServices/id/rule/rule{resource_id}> ')
+    if df_evidences is not None:
+        matching_keys_evidences = [key for key, value in evidences_mapping.items() if isinstance(value, dict) and value.get("evidence_public_service_id") == resource_id]
+        for key in matching_keys_evidences:
+            temp_triples.append(f'  cv:hasInput <{base_url}/PublicServices/id/evidence/evidence{key}> ')
 
     # Add the cv:isGroupedBy triple based on the life_event mapping
     if pd.notna(life_events):
@@ -127,11 +176,11 @@ def generate_triples(resource_id, uuid, title, description, provided_language, c
             life_event = life_event.strip().replace("'", "")
             if life_event in life_events_mapping:
                 event_id = life_events_mapping[life_event]
-                temp_triples.append(f' cv:isGroupedBy<{base_url}/PublicServices/id/event/event{event_id}> ')
+                temp_triples.append(f'  cv:isGroupedBy <{base_url}/PublicServices/id/event/event{event_id}> ')
 
     # Check if output_type is filled, and if so, add the cpsv:produces triple
     if pd.notna(output_type):
-        temp_triples.append(f' cpsv:produces <{base_url}/PublicServices/id/praxis/praxis{resource_id}> ')
+        temp_triples.append(f'  cpsv:produces <{base_url}/PublicServices/id/praxis/praxis{resource_id}> ')
 
     temp_triples = adjust_punctuation(temp_triples)
     for triple in temp_triples:
@@ -139,6 +188,7 @@ def generate_triples(resource_id, uuid, title, description, provided_language, c
 
     return temp_triples
 
+rule_counter_triples = 0
 def append_additional_triples(triples_list, resource_id, cost_min, cost_max, output_type, life_events, df_conditions, df_evidences, df_rules):
     """
     This function appends additional triples based on the conditions for a given resource_id.
@@ -152,56 +202,26 @@ def append_additional_triples(triples_list, resource_id, cost_min, cost_max, out
     Returns:
     - List of triples.
     """
-        
+    global rule_counter_triples    
     triples = []
-
+    temp_triples = []
     # Add new lines for cost_min and cost_max if available
     if not pd.isna(cost_min):
         triples.append(f" <{base_url}/PublicServices/id/cost/cost_min/cost{resource_id}> a cv:Cost ;")
         triples.append(f"   cv:value {cost_min} ;")
-        triples.append('    cv:currency "Euro" ;')
-        triples.append('    dct:description "Min Cost" .')
+        triples.append(f'    cv:currency "Euro" ;')
+        triples.append(f'    dct:description "Min Cost" .')
             
     if not pd.isna(cost_max):
         triples.append(f" <{base_url}/PublicServices/id/cost/cost_max/cost{resource_id}> a cv:Cost ;")
         triples.append(f"   cv:value {cost_max} ;")
-        triples.append('    cv:currency "Euro" ;')
-        triples.append('    dct:description "Max Cost" .')
+        triples.append(f'    cv:currency "Euro" ;')
+        triples.append(f'    dct:description "Max Cost" .')
 
     if not pd.isna(output_type):
         triples.append(f" <{base_url}/PublicServices/id/praxis/praxis{resource_id}> a cv:Output ;")
         if is_valid(output_type):
             triples.append(f'   dct:title "{output_type}" .')
-
-
-    # Check if the resource_id is present in the ProcessConditions.csv and append cv:holdsRequirement triple
-    matching_evidences = df_evidences[df_evidences['id'] == resource_id]
-    for _, row in matching_evidences.iterrows():
-        temp_triples = []
-        if is_valid(row["evidence_description"]):
-            temp_triples.append(f' <{base_url}/PublicServices/id/evidence/evidence{resource_id}> a cv:Evidence ')
-            if is_valid(row["evidence_num_id"]):
-                temp_triples.append(f'   cv:identifier "{row["evidence_num_id"]}" ')
-            if is_valid(row["evidence_description"]):
-                temp_triples.append(f'   cv:name """{row["evidence_description"]}""" ')
-            if is_valid(row["evidence_type"]):
-                temp_triples.append(f'   dct:type "{row["evidence_type"]}" ')
-            if is_valid(row["evidence_related_url"]):
-                temp_triples.append(f'   cv:relatedDocumentation "{row["evidence_related_url"]}" ')
-
-        temp_triples = adjust_punctuation(temp_triples)
-        for triple in temp_triples:
-            append_with_check(triples, triple)
-
-    # Check if the resource_id is present in the ProcessConditions.csv and append cv:holdsRequirement triple
-    matching_rules = df_rules[df_rules['id'] == resource_id]
-    for _, row in matching_rules.iterrows():
-        temp_triples = []
-        temp_triples.append(f' <{base_url}/PublicServices/id/rule/rule{resource_id}> a eli:LegalResource ')
-        if is_valid(row["rule_ada"]):
-            temp_triples.append(f'   dct:identifier "{row["rule_ada"]}" ')
-        if is_valid(row["rule_description"]):
-            temp_triples.append(f'   dct:description "{escape_ttl_string(row["rule_description"])}" ')
 
         temp_triples = adjust_punctuation(temp_triples)
         for triple in temp_triples:
@@ -223,9 +243,9 @@ df_evidences = pd.read_csv("ProcessEvidence.csv", delimiter='*')
 df_evidences.columns = ['id', 'evidence_description', 'evidence_num_id', 'evidence_owner', 'evidence_related_url', 'evidence_type']
 df_evidences['id'] = df_evidences['id'].astype(int)
 
-# Load the ProcessEvidences.csv data
+# Load the ProcessRules.csv data
 df_rules = pd.read_csv("ProcessRules.csv", delimiter='*')
-df_rules.columns = ['id', 'rule_ada', 'rule_description']
+df_rules.columns = ['id', 'rule_decision_number', 'rule_ada', 'rule_description']
 df_rules['id'] = df_rules['id'].astype(int)
 
 # Preprocess the life_events column and generate the mapping
@@ -238,7 +258,17 @@ conditions_mapping = preprocess_conditions(df_conditions)
 with open('conditions_mapping.json', 'w', encoding='utf-8') as json_file:
     json.dump(conditions_mapping, json_file, ensure_ascii=False, indent=4)
 
-triples_list = [generate_triples(row['id'], row['uuid'], row['official_title'], row['description'], row['provided_language'], row['cost_min'], row['cost_max'], row['output_type'], row['life_events'], row['alternative_titles'], df_conditions, df_evidences, df_rules ) for index, row in df.iterrows()]
+# Preprocess the rules and generate the mapping
+rules_mapping = preprocess_rules(df_rules)
+with open('rules_mapping.json', 'w', encoding='utf-8') as json_file:
+    json.dump(rules_mapping, json_file, ensure_ascii=False, indent=4)
+
+# Preprocess the rules and generate the mapping
+evidences_mapping = preprocess_evidences(df_evidences)
+with open('evidences_mapping.json', 'w', encoding='utf-8') as json_file:
+    json.dump(evidences_mapping, json_file, ensure_ascii=False, indent=4)
+
+triples_list = [generate_triples(row['id'], row['uuid'], row['official_title'], row['description'], row['provided_language'], row['cost_min'], row['cost_max'], row['output_type'], row['life_events'], row['alternative_titles'], df_conditions, df_evidences, df_rules) for index, row in df.iterrows()]
 
 # Append additional triples
 for index, row in df.iterrows():
@@ -254,7 +284,7 @@ for condition_name, condition_data in conditions_mapping.items():
         if is_valid(condition_data["conditions_num_id"]):
             triples_conditions.append(f'   cv:identifier "{condition_data["conditions_num_id"]}" ;')
         if is_valid(condition_name):
-            triples_conditions.append(f'   dct:title "{condition_name}" ;')
+            triples_conditions.append(f'   dct:title "{escape_ttl_string(condition_name)}" ;')
         if is_valid(condition_data["conditions_type"]):
             triples_conditions.append(f'   dct:type "{condition_data["conditions_type"]}" .')
         added_conditions.add(condition_id)
@@ -266,7 +296,40 @@ triples_lifeEvents = []
 for life_event, event_id in life_events_mapping.items():
     triples_lifeEvents.append(f' <{base_url}/PublicServices/id/event/event{event_id}> a cv:LifeEvent ;')
     triples_lifeEvents.append(f'   cv:name "{life_event}" .')
+    
 triples_list.append(triples_lifeEvents)
+
+# Append triples for each unique life event from the mapping
+triples_Rules = []
+for rule, rule_data in rules_mapping.items():
+    if isinstance(rule_data, dict):
+        rule_decision_number = rule_data.get("rule_decision_number", "")
+        rule_ada = rule_data.get("rule_ada", "")
+        rule_description = escape_ttl_string(rule_data.get("rule_description") or "")
+
+        triples_Rules.append(f' <{base_url}/PublicServices/id/rule/rule{rule}> a eli:LegalResource ;')
+        triples_Rules.append(f'   dct:identifier "{rule_ada}" ;')
+        triples_Rules.append(f'   eli:id_local "{rule_decision_number}" ;')
+        triples_Rules.append(f'   dct:description "{rule_description}" .')
+
+triples_list.append(triples_Rules)
+
+# Append triples for each unique life event from the mapping
+triples_Evidences = []
+for evidence, evidence_data in evidences_mapping.items():
+    if isinstance(evidence_data, dict):
+        evidence_num_id = evidence_data.get("evidence_num_id", "")
+        evidence_type = evidence_data.get("evidence_type", "")
+        evidence_description = escape_ttl_string(evidence_data.get("evidence_description") or "")
+        evidence_related_url = evidence_data.get("evidence_related_url", "")
+
+        triples_Evidences.append(f' <{base_url}/PublicServices/id/evidence/evidence{evidence}> a cv:Evidence ;')
+        triples_Evidences.append(f'   cv:identifier "{evidence_num_id}" ;')
+        triples_Evidences.append(f'   cv:name "{evidence_description}" ;')
+        triples_Evidences.append(f'   dct:type "{evidence_type}" ;')
+        triples_Evidences.append(f'   cv:relatedDocumentation "{evidence_related_url}" .')
+
+triples_list.append(triples_Evidences)
 
 # Flatten the list of lists into a single list
 triples = [triple for sublist in triples_list for triple in sublist]
