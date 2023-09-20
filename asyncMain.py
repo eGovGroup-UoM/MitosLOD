@@ -3,7 +3,7 @@ import httpx
 import csv
 from processorMain import extract_data_for_csv, save_to_csv
 
-BASE_URL = "https://BASE_URL_OF_SERVICE/v1/services"
+BASE_URL = "https://BASE_URL/v1/services"
 
 async def fetch_ids(page=1, limit=100):
     async with httpx.AsyncClient() as client:
@@ -35,7 +35,7 @@ async def fetch_data_from_url_async(url):
         return resp.json()
 
 async def main_exec_async(ids, keys, output_filename):
-    base_url = "https://BASE_URL_OF_SERVICE/v1/services/"
+    base_url = "https://BASE_URL/v1/services/"
     
     all_extracted_data = []
     
@@ -44,7 +44,7 @@ async def main_exec_async(ids, keys, output_filename):
         print(f"Fetching data from URL: {full_url}")  # Debug statement
         data = await fetch_data_from_url_async(full_url)
         
-        extracted_rows = extract_data_for_csv(data, keys)
+        extracted_rows = extract_data_for_csv(data, keys, output_filename)
         
         all_extracted_data.extend(extracted_rows)
     
@@ -65,7 +65,7 @@ async def process_csvs_async(ids):
     await main_exec_async(ids, properties3, 'ProcessEvidence.csv')
 
     print("Processing CSV4...")  # Debug statement
-    properties4 = ["id","rule_ada","rule_description"]
+    properties4 = ["id","rule_decision_number","rule_ada","rule_description"]
     await main_exec_async(ids, properties4, 'ProcessRules.csv')
 
 async def main_async():
