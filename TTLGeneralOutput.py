@@ -1,7 +1,7 @@
 import pandas as pd
 import json
 
-base_url = 'https://mitos.gov.gr:8890'
+base_url = 'https://BASE_URL:8890'
 
 def is_valid(value):
     return bool(value) and str(value).lower() != 'nan'
@@ -136,9 +136,9 @@ def generate_triples(resource_id, uuid, title, description, provided_language, c
     temp_triples.append(f'  dct:title "{title}" ')
 
     if is_valid(alternative_titles):
-        temp_triples.append(f'  skos:altLabel """{alternative_titles}""" ')
+        temp_triples.append(f'  skos:altLabel "{escape_ttl_string(alternative_titles)}" ')
     if is_valid(description):
-        temp_triples.append(f'  dct:description """{description}""" ')
+        temp_triples.append(f'  dct:description "{escape_ttl_string(description)}" ')
     
     # Check if cost_min and cost_max are not null and add the cv:hasCost triple
     if not pd.isna(cost_min) and not pd.isna(cost_max):
