@@ -1,7 +1,7 @@
 import pandas as pd
 import json
 
-base_url = 'https://BASE_URL:8890'
+base_url = 'https://mitos.gov.gr:8890'
 
 def is_valid(value):
     return bool(value) and str(value).lower() != 'nan'
@@ -229,122 +229,131 @@ def append_additional_triples(triples_list, resource_id, cost_min, cost_max, out
 
     triples_list.append(triples)
 
-# Read the CSV file using the pipe ('|') delimiter
-csv_file_path = 'ProcessGeneral.csv'
-df = pd.read_csv(csv_file_path, delimiter='*')
+def main_transform():
+    global conditions_mapping
+    global rules_mapping
+    global evidences_mapping
+    global life_events_mapping
 
-# Load the ProcessConditions.csv data
-df_conditions = pd.read_csv("ProcessConditions.csv", delimiter='*')
-df_conditions.columns = ['id', 'conditions_name', 'conditions_num_id', 'conditions_type']
-df_conditions['id'] = df_conditions['id'].astype(int)
+    # Read the CSV file using the pipe ('|') delimiter
+    csv_file_path = 'dags/data/ProcessGeneral.csv'
+    df = pd.read_csv(csv_file_path, delimiter='*')
 
-# Load the ProcessEvidences.csv data
-df_evidences = pd.read_csv("ProcessEvidence.csv", delimiter='*')
-df_evidences.columns = ['id', 'evidence_description', 'evidence_num_id', 'evidence_owner', 'evidence_related_url', 'evidence_type']
-df_evidences['id'] = df_evidences['id'].astype(int)
+    # Load the ProcessConditions.csv data
+    df_conditions = pd.read_csv("dags/data/ProcessConditions.csv", delimiter='*')
+    df_conditions.columns = ['id', 'conditions_name', 'conditions_num_id', 'conditions_type']
+    df_conditions['id'] = df_conditions['id'].astype(int)
 
-# Load the ProcessRules.csv data
-df_rules = pd.read_csv("ProcessRules.csv", delimiter='*')
-df_rules.columns = ['id', 'rule_decision_number', 'rule_ada', 'rule_description']
-df_rules['id'] = df_rules['id'].astype(int)
+    # Load the ProcessEvidences.csv data
+    df_evidences = pd.read_csv("dags/data/ProcessEvidence.csv", delimiter='*')
+    df_evidences.columns = ['id', 'evidence_description', 'evidence_num_id', 'evidence_owner', 'evidence_related_url', 'evidence_type']
+    df_evidences['id'] = df_evidences['id'].astype(int)
 
-# Preprocess the life_events column and generate the mapping
-life_events_mapping = preprocess_life_events(df['life_events'].tolist())
-with open('life_events_mapping.json', 'w', encoding='utf-8') as json_file:
-    json.dump(life_events_mapping, json_file, ensure_ascii=False, indent=4)
+    # Load the ProcessRules.csv data
+    df_rules = pd.read_csv("dags/data/ProcessRules.csv", delimiter='*')
+    df_rules.columns = ['id', 'rule_decision_number', 'rule_ada', 'rule_description']
+    df_rules['id'] = df_rules['id'].astype(int)
 
-# Preprocess the conditions and generate the mapping
-conditions_mapping = preprocess_conditions(df_conditions)
-with open('conditions_mapping.json', 'w', encoding='utf-8') as json_file:
-    json.dump(conditions_mapping, json_file, ensure_ascii=False, indent=4)
+    # Preprocess the life_events column and generate the mapping
+    life_events_mapping = preprocess_life_events(df['life_events'].tolist())
+    with open('dags/data/life_events_mapping.json', 'w', encoding='utf-8') as json_file:
+        json.dump(life_events_mapping, json_file, ensure_ascii=False, indent=4)
 
-# Preprocess the rules and generate the mapping
-rules_mapping = preprocess_rules(df_rules)
-with open('rules_mapping.json', 'w', encoding='utf-8') as json_file:
-    json.dump(rules_mapping, json_file, ensure_ascii=False, indent=4)
+    # Preprocess the conditions and generate the mapping
+    conditions_mapping = preprocess_conditions(df_conditions)
+    with open('dags/data/conditions_mapping.json', 'w', encoding='utf-8') as json_file:
+        json.dump(conditions_mapping, json_file, ensure_ascii=False, indent=4)
 
-# Preprocess the rules and generate the mapping
-evidences_mapping = preprocess_evidences(df_evidences)
-with open('evidences_mapping.json', 'w', encoding='utf-8') as json_file:
-    json.dump(evidences_mapping, json_file, ensure_ascii=False, indent=4)
+    # Preprocess the rules and generate the mapping
+    rules_mapping = preprocess_rules(df_rules)
+    with open('dags/data/rules_mapping.json', 'w', encoding='utf-8') as json_file:
+        json.dump(rules_mapping, json_file, ensure_ascii=False, indent=4)
 
-triples_list = [generate_triples(row['id'], row['uuid'], row['official_title'], row['description'], row['provided_language'], row['cost_min'], row['cost_max'], row['output_type'], row['life_events'], row['alternative_titles'], df_conditions, df_evidences, df_rules) for index, row in df.iterrows()]
+    # Preprocess the rules and generate the mapping
+    evidences_mapping = preprocess_evidences(df_evidences)
+    with open('dags/data/evidences_mapping.json', 'w', encoding='utf-8') as json_file:
+        json.dump(evidences_mapping, json_file, ensure_ascii=False, indent=4)
 
-# Append additional triples
-for index, row in df.iterrows():
-    append_additional_triples(triples_list, row['id'], row['cost_min'], row['cost_max'], row['output_type'], row['life_events'], df_conditions, df_evidences, df_rules)
+    triples_list = [generate_triples(row['id'], row['uuid'], row['official_title'], row['description'], row['provided_language'], row['cost_min'], row['cost_max'], row['output_type'], row['life_events'], row['alternative_titles'], df_conditions, df_evidences, df_rules) for index, row in df.iterrows()]
 
-# Append triples for each unique condition from the mapping
-added_conditions = set()
-triples_conditions = []
-for condition_name, condition_data in conditions_mapping.items():
-    condition_id = condition_data["id"]
-    if condition_id not in added_conditions:
-        triples_conditions.append(f' <{base_url}/PublicServices/id/requirement/requirement{condition_id}> a cv:Requirement ;')
-        if is_valid(condition_data["conditions_num_id"]):
-            triples_conditions.append(f'   cv:identifier "{condition_data["conditions_num_id"]}" ;')
-        if is_valid(condition_name):
-            triples_conditions.append(f'   dct:title "{escape_ttl_string(condition_name)}" ;')
-        if is_valid(condition_data["conditions_type"]):
-            triples_conditions.append(f'   dct:type "{condition_data["conditions_type"]}" .')
-        added_conditions.add(condition_id)
+    # Append additional triples
+    for index, row in df.iterrows():
+        append_additional_triples(triples_list, row['id'], row['cost_min'], row['cost_max'], row['output_type'], row['life_events'], df_conditions, df_evidences, df_rules)
 
-triples_list.append(triples_conditions)
+    # Append triples for each unique condition from the mapping
+    added_conditions = set()
+    triples_conditions = []
+    for condition_name, condition_data in conditions_mapping.items():
+        condition_id = condition_data["id"]
+        if condition_id not in added_conditions:
+            triples_conditions.append(f' <{base_url}/PublicServices/id/requirement/requirement{condition_id}> a cv:Requirement ;')
+            if is_valid(condition_data["conditions_num_id"]):
+                triples_conditions.append(f'   cv:identifier "{condition_data["conditions_num_id"]}" ;')
+            if is_valid(condition_name):
+                triples_conditions.append(f'   dct:title "{escape_ttl_string(condition_name)}" ;')
+            if is_valid(condition_data["conditions_type"]):
+                triples_conditions.append(f'   dct:type "{condition_data["conditions_type"]}" .')
+            added_conditions.add(condition_id)
 
-# Append triples for each unique life event from the mapping
-triples_lifeEvents = []
-for life_event, event_id in life_events_mapping.items():
-    triples_lifeEvents.append(f' <{base_url}/PublicServices/id/event/event{event_id}> a cv:LifeEvent ;')
-    triples_lifeEvents.append(f'   cv:name "{life_event}" .')
-    
-triples_list.append(triples_lifeEvents)
+    triples_list.append(triples_conditions)
 
-# Append triples for each unique life event from the mapping
-triples_Rules = []
-for rule, rule_data in rules_mapping.items():
-    if isinstance(rule_data, dict):
-        rule_decision_number = rule_data.get("rule_decision_number", "")
-        rule_ada = rule_data.get("rule_ada", "")
-        rule_description = escape_ttl_string(rule_data.get("rule_description") or "")
+    # Append triples for each unique life event from the mapping
+    triples_lifeEvents = []
+    for life_event, event_id in life_events_mapping.items():
+        triples_lifeEvents.append(f' <{base_url}/PublicServices/id/event/event{event_id}> a cv:LifeEvent ;')
+        triples_lifeEvents.append(f'   cv:name "{life_event}" .')
+        
+    triples_list.append(triples_lifeEvents)
 
-        triples_Rules.append(f' <{base_url}/PublicServices/id/rule/rule{rule}> a eli:LegalResource ;')
-        triples_Rules.append(f'   dct:identifier "{rule_ada}" ;')
-        triples_Rules.append(f'   eli:id_local "{rule_decision_number}" ;')
-        triples_Rules.append(f'   dct:description "{rule_description}" .')
+    # Append triples for each unique life event from the mapping
+    triples_Rules = []
+    for rule, rule_data in rules_mapping.items():
+        if isinstance(rule_data, dict):
+            rule_decision_number = rule_data.get("rule_decision_number", "")
+            rule_ada = rule_data.get("rule_ada", "")
+            rule_description = escape_ttl_string(rule_data.get("rule_description") or "")
 
-triples_list.append(triples_Rules)
+            triples_Rules.append(f' <{base_url}/PublicServices/id/rule/rule{rule}> a eli:LegalResource ;')
+            triples_Rules.append(f'   dct:identifier "{rule_ada}" ;')
+            triples_Rules.append(f'   eli:id_local "{rule_decision_number}" ;')
+            triples_Rules.append(f'   dct:description "{rule_description}" .')
 
-# Append triples for each unique life event from the mapping
-triples_Evidences = []
-for evidence, evidence_data in evidences_mapping.items():
-    if isinstance(evidence_data, dict):
-        evidence_num_id = evidence_data.get("evidence_num_id", "")
-        evidence_type = evidence_data.get("evidence_type", "")
-        evidence_description = escape_ttl_string(evidence_data.get("evidence_description") or "")
-        evidence_related_url = evidence_data.get("evidence_related_url", "")
+    triples_list.append(triples_Rules)
 
-        triples_Evidences.append(f' <{base_url}/PublicServices/id/evidence/evidence{evidence}> a cv:Evidence ;')
-        triples_Evidences.append(f'   cv:identifier "{evidence_num_id}" ;')
-        triples_Evidences.append(f'   cv:name "{evidence_description}" ;')
-        triples_Evidences.append(f'   dct:type "{evidence_type}" ;')
-        triples_Evidences.append(f'   cv:relatedDocumentation "{evidence_related_url}" .')
+    # Append triples for each unique life event from the mapping
+    triples_Evidences = []
+    for evidence, evidence_data in evidences_mapping.items():
+        if isinstance(evidence_data, dict):
+            evidence_num_id = evidence_data.get("evidence_num_id", "")
+            evidence_type = evidence_data.get("evidence_type", "")
+            evidence_description = escape_ttl_string(evidence_data.get("evidence_description") or "")
+            evidence_related_url = evidence_data.get("evidence_related_url", "")
 
-triples_list.append(triples_Evidences)
+            triples_Evidences.append(f' <{base_url}/PublicServices/id/evidence/evidence{evidence}> a cv:Evidence ;')
+            triples_Evidences.append(f'   cv:identifier "{evidence_num_id}" ;')
+            triples_Evidences.append(f'   cv:name "{evidence_description}" ;')
+            triples_Evidences.append(f'   dct:type "{evidence_type}" ;')
+            triples_Evidences.append(f'   cv:relatedDocumentation "{evidence_related_url}" .')
 
-# Flatten the list of lists into a single list
-triples = [triple for sublist in triples_list for triple in sublist]
+    triples_list.append(triples_Evidences)
 
-# Write the triples to the TTL file
-with open("generated_data.ttl", "w") as f:
-    f.write("@prefix schema: <https://schema.org/> .\n")
-    f.write("@prefix eli: <http://data.europa.eu/eli/ontology#> .\n")
-    f.write("@prefix cv: <http://data.europa.eu/m8g/> .\n")
-    f.write("@prefix adms: <http://www.w3.org/ns/adms#> .\n")
-    f.write("@prefix dct: <http://purl.org/dc/terms/> .\n")
-    f.write("@prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n")
-    f.write("@prefix dcat: <http://www.w3.org/ns/dcat#> .\n")
-    f.write("@prefix locn: <http://www.w3.org/ns/locn#> .\n")
-    f.write("@prefix foaf: <http://xmlns.com/foaf/0.1/> .\n")
-    f.write("@prefix cpsv: <http://purl.org/vocab/cpsv#> .\n")
-    f.write("\n")
-    f.write("\n".join(triples))
+    # Flatten the list of lists into a single list
+    triples = [triple for sublist in triples_list for triple in sublist]
+
+    # Write the triples to the TTL file
+    with open("dags/data/generated_data.ttl", "w") as f:
+        f.write("@prefix schema: <https://schema.org/> .\n")
+        f.write("@prefix eli: <http://data.europa.eu/eli/ontology#> .\n")
+        f.write("@prefix cv: <http://data.europa.eu/m8g/> .\n")
+        f.write("@prefix adms: <http://www.w3.org/ns/adms#> .\n")
+        f.write("@prefix dct: <http://purl.org/dc/terms/> .\n")
+        f.write("@prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n")
+        f.write("@prefix dcat: <http://www.w3.org/ns/dcat#> .\n")
+        f.write("@prefix locn: <http://www.w3.org/ns/locn#> .\n")
+        f.write("@prefix foaf: <http://xmlns.com/foaf/0.1/> .\n")
+        f.write("@prefix cpsv: <http://purl.org/vocab/cpsv#> .\n")
+        f.write("\n")
+        f.write("\n".join(triples))
+
+if __name__ == "__main__":
+    main_transform()

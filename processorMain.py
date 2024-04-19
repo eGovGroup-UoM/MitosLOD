@@ -47,13 +47,13 @@ def extract_data_for_csv(data, keys, filenameCheck):
     # Helper function to fetch all values for a key
     def get_all_values(data, key):
         return list(find_key_recursive(data, key, depth=0, parent_key=None))
-    
+
     # First, gather all the data for each key
     all_data = {key: get_all_values(data, key) for key in keys}
-    
+
     # Find the max length of data among all keys to determine number of rows
     max_rows = max(len(values) for values in all_data.values())
-    
+
     # Construct the rows
     extracted_rows = []
     prev_id = None
@@ -68,15 +68,15 @@ def extract_data_for_csv(data, keys, filenameCheck):
 
 
         # If processing processEvidences and all values are None, skip
-        if filenameCheck == 'ProcessEvidence.csv' and all(value is None for value in row[1:]):
+        if filenameCheck == 'dags/data/ProcessEvidence.csv' and all(value is None for value in row[1:]):
             continue
-        
+
         ## Only append the row if 'id' has a valid value
         #if row[0]:  # Assuming 'id' is the first key
-        if(filenameCheck == 'ProcessGeneral.csv'):
+        if(filenameCheck == 'dags/data/ProcessGeneral.csv'):
             if row[0]:
                 extracted_rows.append(row)
-        else:        
+        else:
             # If the 'id' of the current row is empty, use the previous 'id'
             if not row[0] and prev_id:
                 row[0] = prev_id
@@ -93,7 +93,7 @@ def main_exec(keys, output_filename):
     base_url = "https://BASE_URL/v1/services/"
     filenameCheck = output_filename
     all_extracted_data = []
-    
+
     # Fetch and extract data for each ID
     for id_ in ids:
         full_url = base_url + id_
@@ -101,7 +101,7 @@ def main_exec(keys, output_filename):
         data = fetch_data_from_url(full_url)
         extracted_rows = extract_data_for_csv(data, keys, filenameCheck)
         all_extracted_data.extend(extracted_rows)
-    
+
      # Debug statement
     print(f"Saving {len(all_extracted_data)} rows to {output_filename}")
 
