@@ -294,6 +294,8 @@ def main_transform():
                 triples_conditions.append(f'   dct:title "{escape_ttl(condition_name)}" ;')
             if is_valid(condition_data["conditions_type"]):
                 triples_conditions.append(f'   dct:type "{condition_data["conditions_type"]}" .')
+            else:
+                triples_conditions[-1] = triples_conditions[-1].replace(';','.')
             added_conditions.add(condition_id)
 
     triples_list.append(triples_conditions)
