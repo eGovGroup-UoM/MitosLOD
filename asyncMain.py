@@ -5,7 +5,7 @@ from processorMain import extract_data_for_csv, save_to_csv
 
 BASE_URL = "https://api.digigov.grnet.gr/v1/services"
 
-page_limit = 2
+page_limit = 35
 
 async def fetch_ids(page=1, limit=100):
     all_ids = []
@@ -13,7 +13,7 @@ async def fetch_ids(page=1, limit=100):
         for current_page in range(1, page_limit):
             print(len(all_ids))
             params = {
-                "page": page,
+                "page": current_page,
                 "limit": limit
             }
             resp = await client.get(BASE_URL, params=params)
