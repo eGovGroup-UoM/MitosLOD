@@ -17,8 +17,8 @@ def upload_ttl():
     ttl_file = "dags/data/generated_data.ttl"
     virtuoso_url = "https://virtuoso-1706142355.p1.bdti.dataplatform.tech.ec.europa.eu"
     graph_uri = "https://mitos.gov.gr:8890/"
-    username = "dba"
-    password = "o8e4CQv5olQf87sT"
+    username = "?????"
+    password = "?????"
     upload_ttl_to_virtuoso(ttl_file, virtuoso_url, graph_uri, username, password)
 
 default_args = {
