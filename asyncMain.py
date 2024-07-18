@@ -31,7 +31,7 @@ async def fetch_updated(services_list):
             print(f"Downloading service #{service['id']}")
             url = f"{BASE_URL}/{service['id']}"
             data = await fetch_data_from_url_async(url)
-            with open(filepath, 'w') as outfile:
+            with open(filepath, 'a') as outfile:
                 json.dump(data, outfile, ensure_ascii=False)
         else:
             local_time = os.path.getmtime(filepath)
