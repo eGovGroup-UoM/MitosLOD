@@ -14,7 +14,7 @@ def generate_ttl():
     main_transform()
 
 def upload_ttl():
-    ttl_file = "dags/data/generated_data.ttl"
+    ttl_file = "/app/data/generated_data.ttl"
     virtuoso_url = "https://virtuoso-1706142355.p1.bdti.dataplatform.tech.ec.europa.eu"
     graph_uri = "https://mitos.gov.gr:8890/"
     username = "?????"

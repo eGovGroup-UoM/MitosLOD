@@ -68,12 +68,12 @@ def extract_data_for_csv(data, keys, filenameCheck):
 
 
         # If processing processEvidences and all values are None, skip
-        if filenameCheck == 'dags/data/ProcessEvidence.csv' and all(value is None for value in row[1:]):
+        if filenameCheck == '/app/data/ProcessEvidence.csv' and all(value is None for value in row[1:]):
             continue
 
         ## Only append the row if 'id' has a valid value
         #if row[0]:  # Assuming 'id' is the first key
-        if(filenameCheck == 'dags/data/ProcessGeneral.csv'):
+        if(filenameCheck == '/app/data/ProcessGeneral.csv'):
             if row[0]:
                 extracted_rows.append(row)
         else:

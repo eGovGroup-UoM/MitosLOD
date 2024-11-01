@@ -1,0 +1,32 @@
+services:
+
+  mitos-lod:
+    build: .
+    container_name: mitos-lod
+    environment:
+      - TZ=Europe/Athens
+      - CRON_SCHEDULE=0 */6 * * *
+      - VIRTUOSO_URL=http://virtuoso:8890
+      - GRAPH_URI=https://mitos.gov.gr:8890
+      - VIRTUOSO_USERNAME=dba
+      - VIRTUOSO_PASSWORD=CHANGE_THIS_PASSWORD
+
+    volumes:
+      - data:/app/data
+
+  virtuoso:
+    container_name: mitos-virtuoso
+    image: openlink/virtuoso-opensource-7:latest
+    environment:
+      - DBA_PASSWORD=CHANGE_THIS_PASSWORD
+      - VIRT_SPARQL_MaxQueryCostEstimationTime=0
+      - VIRT_SPARQL_DefaultGraph=https://mitos.gov.gr:8890
+      - 'VIRT_SPARQL_DefaultQuery=PREFIX cpsv:<http://purl.org/vocab/cpsv#> PREFIX dct: <http://purl.org/dc/terms/> SELECT ?ps ?name WHERE {?ps a cpsv:PublicService. ?ps dct:title ?name} ORDER BY ?name LIMIT 100'
+    ports:
+      - "8890:8890"
+    volumes:
+      - db:/database
+
+volumes:
+  db:
+  data:

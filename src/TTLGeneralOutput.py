@@ -237,42 +237,42 @@ def main_transform():
     global life_events_mapping
 
     # Read the CSV file using the pipe ('|') delimiter
-    csv_file_path = 'dags/data/ProcessGeneral.csv'
+    csv_file_path = '/app/data/ProcessGeneral.csv'
     df = pd.read_csv(csv_file_path, delimiter='*')
 
     # Load the ProcessConditions.csv data
-    df_conditions = pd.read_csv("dags/data/ProcessConditions.csv", delimiter='*')
+    df_conditions = pd.read_csv("/app/data/ProcessConditions.csv", delimiter='*')
     df_conditions.columns = ['id', 'conditions_name', 'conditions_num_id', 'conditions_type']
     df_conditions['id'] = df_conditions['id'].astype(int)
 
     # Load the ProcessEvidences.csv data
-    df_evidences = pd.read_csv("dags/data/ProcessEvidence.csv", delimiter='*')
+    df_evidences = pd.read_csv("/app/data/ProcessEvidence.csv", delimiter='*')
     df_evidences.columns = ['id', 'evidence_description', 'evidence_num_id', 'evidence_owner', 'evidence_related_url', 'evidence_type']
     df_evidences['id'] = df_evidences['id'].astype(int)
 
     # Load the ProcessRules.csv data
-    df_rules = pd.read_csv("dags/data/ProcessRules.csv", delimiter='*')
+    df_rules = pd.read_csv("/app/data/ProcessRules.csv", delimiter='*')
     df_rules.columns = ['id', 'rule_decision_number', 'rule_ada', 'rule_description']
     df_rules['id'] = df_rules['id'].astype(int)
 
     # Preprocess the life_events column and generate the mapping
     life_events_mapping = preprocess_life_events(df['life_events'].tolist())
-    with open('dags/data/life_events_mapping.json', 'w', encoding='utf-8') as json_file:
+    with open('/app/data/life_events_mapping.json', 'w', encoding='utf-8') as json_file:
         json.dump(life_events_mapping, json_file, ensure_ascii=False, indent=4)
 
     # Preprocess the conditions and generate the mapping
     conditions_mapping = preprocess_conditions(df_conditions)
-    with open('dags/data/conditions_mapping.json', 'w', encoding='utf-8') as json_file:
+    with open('/app/data/conditions_mapping.json', 'w', encoding='utf-8') as json_file:
         json.dump(conditions_mapping, json_file, ensure_ascii=False, indent=4)
 
     # Preprocess the rules and generate the mapping
     rules_mapping = preprocess_rules(df_rules)
-    with open('dags/data/rules_mapping.json', 'w', encoding='utf-8') as json_file:
+    with open('/app/data/rules_mapping.json', 'w', encoding='utf-8') as json_file:
         json.dump(rules_mapping, json_file, ensure_ascii=False, indent=4)
 
     # Preprocess the rules and generate the mapping
     evidences_mapping = preprocess_evidences(df_evidences)
-    with open('dags/data/evidences_mapping.json', 'w', encoding='utf-8') as json_file:
+    with open('/app/data/evidences_mapping.json', 'w', encoding='utf-8') as json_file:
         json.dump(evidences_mapping, json_file, ensure_ascii=False, indent=4)
 
     triples_list = [generate_triples(row['id'], row['uuid'], row['official_title'], row['description'], row['provided_language'], row['cost_min'], row['cost_max'], row['output_type'], row['life_events'], row['alternative_titles'], df_conditions, df_evidences, df_rules) for index, row in df.iterrows()]
@@ -344,7 +344,7 @@ def main_transform():
     triples = [triple for sublist in triples_list for triple in sublist]
 
     # Write the triples to the TTL file
-    with open("dags/data/generated_data.ttl", "w") as f:
+    with open("/app/data/generated_data.ttl", "w") as f:
         f.write("@prefix schema: <https://schema.org/> .\n")
         f.write("@prefix eli: <http://data.europa.eu/eli/ontology#> .\n")
         f.write("@prefix cv: <http://data.europa.eu/m8g/> .\n")

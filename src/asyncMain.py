@@ -23,7 +23,7 @@ async def fetch_services_list():
                 break
         return services
 
-service_path = "dags/data/services/"
+service_path = "/app/data/services/"
 async def fetch_updated(services_list):
     for service in services_list:
         filepath = f"{service_path}{service['id']}.json"
@@ -80,19 +80,19 @@ async def main_exec_async(services_list, keys, output_filename):
 async def process_csvs_async(services_list):
     #print("Processing CSV1...")  # Debug statement
     properties = ["id","uuid","status","estimated_implementation_time","provided_language","org_owner","provision_org","output_type","cost_min","cost_max","life_events","alternative_titles","official_title","description","last_updated"]
-    await main_exec_async(services_list, properties, 'dags/data/ProcessGeneral.csv')
+    await main_exec_async(services_list, properties, '/app/data/ProcessGeneral.csv')
 
     #print("Processing CSV2...")  # Debug statement
     properties2 = ["id","conditions_name","conditions_num_id","conditions_type"]
-    await main_exec_async(services_list, properties2, 'dags/data/ProcessConditions.csv')
+    await main_exec_async(services_list, properties2, '/app/data/ProcessConditions.csv')
 
     #print("Processing CSV3...")  # Debug statement
     properties3 = ["id","evidence_description","evidence_num_id","evidence_owner","evidence_related_url","evidence_type"]
-    await main_exec_async(services_list, properties3, 'dags/data/ProcessEvidence.csv')
+    await main_exec_async(services_list, properties3, '/app/data/ProcessEvidence.csv')
 
     #print("Processing CSV4...")  # Debug statement
     properties4 = ["id","rule_decision_number","rule_ada","rule_description"]
-    await main_exec_async(services_list, properties4, 'dags/data/ProcessRules.csv')
+    await main_exec_async(services_list, properties4, '/app/data/ProcessRules.csv')
 
 async def main_async():
     services_list = await fetch_services_list()
