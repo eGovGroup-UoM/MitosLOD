@@ -3,16 +3,18 @@ services:
   mitos-lod:
     build: .
     container_name: mitos-lod
+    restart: unless-stopped
     environment:
       - TZ=Europe/Athens
-      - CRON_SCHEDULE=0 */6 * * *
+      - CRON_SCHEDULE=0 * * * *
       - VIRTUOSO_URL=http://virtuoso:8890
       - GRAPH_URI=https://mitos.gov.gr:8890
       - VIRTUOSO_USERNAME=dba
       - VIRTUOSO_PASSWORD=CHANGE_THIS_PASSWORD
-
     volumes:
       - data:/app/data
+    depends_on:
+      - virtuoso
 
   virtuoso:
     container_name: mitos-virtuoso

@@ -1,13 +1,14 @@
 #!/bin/bash
 
-echo "Running asyncMain.py..."
+echo "Starting run at $(date)"
+echo "Getting Services from Mitos... (asyncMain.py)"
 /usr/local/bin/python3 /app/asyncMain.py
 if [ $? -ne 0 ]; then
   echo "asyncMain.py failed. Exiting."
   exit 1
 fi
 
-echo "Running TTLGeneralOutput.py..."
+echo "Transforming into RDF... (TTLGeneralOutput.py)"
 /usr/local/bin/python3 /app/TTLGeneralOutput.py
 if [ $? -ne 0 ]; then
   echo "TTLGeneralOutput.py failed. Exiting."
@@ -15,11 +16,11 @@ if [ $? -ne 0 ]; then
 fi
 
 # Run the third script
-echo "Running upload.py..."
+echo "Uploading to Virtuoso... (upload.py)"
 /usr/local/bin/python3 /app/upload.py
 if [ $? -ne 0 ]; then
   echo "upload.py failed. Exiting."
   exit 1
 fi
 
-echo "All scripts executed successfully."
+echo "All scripts executed successfully at $(date)."

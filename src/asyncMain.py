@@ -96,7 +96,7 @@ async def process_csvs_async(services_list):
 
 async def main_async():
     services_list = await fetch_services_list()
-    print(len(services_list))
+    print(f"Found {len(services_list)} services")
     await fetch_updated(services_list)
     delete_deprecated_services(services_list)
     await process_csvs_async(services_list)
