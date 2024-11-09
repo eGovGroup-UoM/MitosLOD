@@ -7,5 +7,6 @@ echo "$CRON_SCHEDULE /app/run.sh >> /proc/1/fd/1 2>&1" > /etc/cron.d/mitos
 # Apply the cron job
 crontab /etc/cron.d/mitos
 
+printenv > /etc/environment # fixes issue where environment variables are not available in the crontab
 # Start cron in the foreground
 cron -f
